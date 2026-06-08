@@ -1,0 +1,64 @@
+{
+  "projets": [
+    {
+      "id": "2026-06-08T09:02:49.065826",
+      "nom": "Hemle",
+      "budget": 700000.0,
+      "description": "Gestion générale du bar ",
+      "date_creation": "08/06/2026",
+      "besoins": [
+        {
+          "id": "2026-06-08T09:03:15.857788",
+          "nom": "Patente Fiscale",
+          "montant": 150000.0,
+          "verse": 0.0,
+          "date": "08/06/2026",
+          "archive": false
+        },
+        {
+          "id": "2026-06-08T09:04:02.422785",
+          "nom": "Tenue serveuse",
+          "montant": 10000.0,
+          "verse": 10000.0,
+          "date": "08/06/2026",
+          "archive": true
+        },
+        {
+          "id": "2026-06-08T09:06:58.316771",
+          "nom": "Sono + Fixation des cables",
+          "montant": 1220000.0,
+          "verse": 920000.0,
+          "date": "08/06/2026",
+          "archive": false
+        }
+      ]
+    }
+  ],
+  "archives": [
+    {
+      "id": "2026-06-08T08:59:56.297389",
+      "nom": "MINERVE",
+      "budget": 0.0,
+      "description": "",
+      "date_creation": "08/06/2026",
+      "besoins": [
+        {
+          "id": "2026-06-08T10:16:29.811178",
+          "nom": "VPN Accès",
+          "montant": 180000.0,
+          "verse": 180000.0,
+          "date": "08/06/2026",
+          "archive": true
+        },
+        {
+          "id": "2026-06-08T10:16:54.853696",
+          "nom": "Achat PC",
+          "montant": 100000.0,
+          "verse": 100000.0,
+          "date": "08/06/2026",
+          "archive": true
+        }
+      ]
+    }
+  ]
+}
