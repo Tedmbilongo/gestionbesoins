@@ -281,6 +281,7 @@ with st.sidebar:
 
                         # Auto-archivage projet si tous besoins complets
                         if all(b["archive"] for b in p["besoins"]) and len(p["besoins"]) > 0:
+                            p["date_archive"] = datetime.now().strftime("%d/%m/%Y")
                             st.session_state.data["archives"].append(p)
                             st.session_state.data["projets"].remove(p)
                             save()
@@ -390,7 +391,7 @@ with tab1:
                     <div class='projet-title'>{projet['nom']}</div>
                     <div class='projet-budget'>
                         Créé le {projet.get('date_creation','—')}
-                        {'· ' + projet['description'] if projet.get('description') else ''}
+                        {' · ' + projet['description'] if projet.get('description') else ''}
                         {' · Budget estimé : ' + format_fcfa(projet['budget']) if projet.get('budget',0) > 0 else ''}
                     </div>
                     """, unsafe_allow_html=True)
@@ -436,7 +437,7 @@ with tab1:
 
                 # ── Besoins ──
                 besoins_actifs   = [b for b in besoins if not b.get("archive")]
-                besoins_archivés = [b for b in besoins if b.get("archive")]
+                besoins_archives = [b for b in besoins if b.get("archive")]
 
                 if not besoins:
                     st.markdown("<div style='color:#94a3b8;font-size:0.85rem;padding:8px 0;'>Aucun besoin enregistré pour ce projet.</div>", unsafe_allow_html=True)
@@ -505,6 +506,7 @@ with tab1:
                                         del st.session_state[f"pay_mode_{idx}_{real_idx}"]
                                         # Vérifier si projet entièrement financé
                                         if all(b["archive"] for b in projet["besoins"]):
+                                            projet["date_archive"] = datetime.now().strftime("%d/%m/%Y")
                                             st.session_state.data["archives"].append(projet)
                                             st.session_state.data["projets"].pop(idx)
                                             save()
@@ -514,10 +516,10 @@ with tab1:
                                         del st.session_state[f"pay_mode_{idx}_{real_idx}"]
                                         st.rerun()
 
-                    # Besoins archivés (dans le projet)
-                    if besoins_archivés:
+                    # Besoins archivés (dans le projet actif)
+                    if besoins_archives:
                         st.markdown("<div style='font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:#059669;font-weight:600;margin:16px 0 8px 0;'>✔ Besoins complétés</div>", unsafe_allow_html=True)
-                        for besoin in besoins_archivés:
+                        for besoin in besoins_archives:
                             st.markdown(f"""
                             <div style='display:flex;justify-content:space-between;align-items:center;
                                         padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;
@@ -529,7 +531,7 @@ with tab1:
                             </div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — ARCHIVES
+# TAB 2 — ARCHIVES (VERSION CORRIGÉE AVEC AFFICHAGE COMPLET)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab2:
     if not archives:
@@ -544,27 +546,65 @@ with tab2:
             </div>
         </div>""", unsafe_allow_html=True)
     else:
-        for projet in archives:
+        for idx, projet in enumerate(archives):
+            besoins = projet.get("besoins", [])
             t_total = total_projet(projet)
-            st.markdown(f"""
-            <div class='projet-card' style='border-color:#bbf7d0;background:#f0fdf4;'>
-                <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'>
-                    <div class='projet-title'>{projet['nom']}</div>
-                    <span class='badge badge-archive'>Archivé</span>
-                </div>
+            t_verse = total_verse(projet)
+            
+            with st.expander(f"📦  {projet['nom']}  —  {len(besoins)} besoin(s) · {format_fcfa(t_total)}", expanded=False):
+                # En-tête projet
+                st.markdown(f"""
+                <div class='projet-title'>{projet['nom']}</div>
                 <div class='projet-budget'>
-                    {len(projet.get('besoins',[]))} besoin(s) · Montant total : {format_fcfa(t_total)}
-                    {'· ' + projet.get('description','') if projet.get('description') else ''}
+                    Archivé le {projet.get('date_archive', projet.get('date_creation', '—'))}
+                    {' · ' + projet['description'] if projet.get('description') else ''}
                 </div>
                 <div class='progress-wrap'>
                     <div class='progress-bar bar-full' style='width:100%;'></div>
                 </div>
-                <div style='text-align:right;font-size:0.75rem;color:#059669;font-weight:600;margin-top:4px;'>100% financé ✓</div>
-            </div>""", unsafe_allow_html=True)
-
-        # Bouton reset archives
+                <div style='text-align:right;font-size:0.75rem;color:#059669;font-weight:600;margin-bottom:16px;'>
+                    {format_fcfa(t_verse)} / {format_fcfa(t_total)} — 100% financé ✓
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Liste des besoins archivés
+                if besoins:
+                    st.markdown("<div style='font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:#059669;font-weight:600;margin-bottom:8px;'>📋 Détail des besoins complétés</div>", unsafe_allow_html=True)
+                    
+                    for besoin in besoins:
+                        st.markdown(f"""
+                        <div style='display:flex;justify-content:space-between;align-items:center;
+                                    padding:10px 12px;background:#f0fdf4;border:1px solid #bbf7d0;
+                                    border-radius:8px;margin-bottom:6px;'>
+                            <div>
+                                <span style='font-size:0.9rem;color:#1e293b;font-weight:500;'>{besoin['nom']}</span>
+                                <span style='font-size:0.7rem;color:#94a3b8;margin-left:12px;'>{besoin.get('date', '—')}</span>
+                            </div>
+                            <div>
+                                <span style='font-size:0.85rem;color:#059669;font-weight:600;'>
+                                    {format_fcfa(besoin['montant'])} ✓
+                                </span>
+                            </div>
+                        </div>""", unsafe_allow_html=True)
+                
+                # Bouton restaurer
+                col1, col2, col3 = st.columns([1,2,1])
+                with col2:
+                    if st.button("↩️ Restaurer ce projet", key=f"restore_{idx}", use_container_width=True):
+                        # Retirer la date d'archive avant restauration
+                        if "date_archive" in projet:
+                            del projet["date_archive"]
+                        st.session_state.data["projets"].append(projet)
+                        st.session_state.data["archives"].pop(idx)
+                        save()
+                        st.success(f"✅ Projet « {projet['nom']} » restauré dans les projets actifs !")
+                        st.rerun()
+        
+        # Bouton vider toutes les archives
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🗑️ Vider les archives", type="secondary"):
-            st.session_state.data["archives"] = []
-            save()
-            st.rerun()
+        col1, col2, col3 = st.columns([1,2,1])
+        with col2:
+            if st.button("🗑️ Vider toutes les archives", type="secondary", use_container_width=True):
+                st.session_state.data["archives"] = []
+                save()
+                st.rerun()
