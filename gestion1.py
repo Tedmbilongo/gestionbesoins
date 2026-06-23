@@ -1,16 +1,17 @@
 import streamlit as st
-#import json
-#import os
+import json
+import os
 from supabase import create_client
 from datetime import datetime
 
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+# ─── CONNEXION SUPABASE ────────────────────────────────────────────────────────
+@st.cache_resource
+def init_supabase():
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
-supabase = create_client(
-    SUPABASE_URL,
-    SUPABASE_KEY
-)
+supabase = init_supabase()
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -196,12 +197,15 @@ hr { border-color: #bfdbfe !important; }
 
 def charger_donnees():
     try:
-        resultat = supabase.table("projets_financiers").select("*").eq("id", "principal").execute()
-        
+        resultat = supabase.table("projets_financiers") \
+                           .select("*") \
+                           .eq("id", "principal") \
+                           .execute()
+
         if resultat.data and len(resultat.data) > 0:
             return resultat.data[0]["data"]
-        
-        # Ligne introuvable, on la crée
+
+        # Ligne inexistante, on l'initialise
         data_initiale = {"projets": [], "archives": []}
         supabase.table("projets_financiers").insert({
             "id": "principal",
@@ -209,11 +213,10 @@ def charger_donnees():
             "data": data_initiale
         }).execute()
         return data_initiale
-    
-    except Exception as e:
-        st.error(f"Erreur Supabase : {str(e)}")
-        return {"projets": [], "archives": []}
 
+    except Exception as e:
+        st.error(f"Erreur de connexion Supabase : {str(e)}")
+        return {"projets": [], "archives": []}
 
 def sauvegarder_donnees(data):
     try:
@@ -223,7 +226,7 @@ def sauvegarder_donnees(data):
             "data": data
         }).execute()
     except Exception as e:
-        st.error(f"Erreur sauvegarde : {str(e)}")
+        st.error(f"Erreur de sauvegarde : {str(e)}")
 
 # ─── SESSION STATE ──────────────────────────────────────────────────────────────
 if "data" not in st.session_state:
