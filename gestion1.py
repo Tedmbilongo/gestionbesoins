@@ -7,6 +7,11 @@ from datetime import datetime
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
+supabase = create_client(
+    SUPABASE_URL,
+    SUPABASE_KEY
+)
+
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Groupe · Suivi Financier",
