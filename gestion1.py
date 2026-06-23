@@ -1,7 +1,11 @@
 import streamlit as st
-import json
-import os
+#import json
+#import os
+from supabase import create_client
 from datetime import datetime
+
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -11,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-DATA_FILE = "projets_data.json"
+#DATA_FILE = "projets_data.json"
 
 # ─── STYLE ─────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -175,15 +179,52 @@ hr { border-color: #bfdbfe !important; }
 """, unsafe_allow_html=True)
 
 # ─── PERSISTANCE ───────────────────────────────────────────────────────────────
+#def charger_donnees():
+#    if os.path.exists(DATA_FILE):
+#        with open(DATA_FILE, "r", encoding="utf-8") as f:
+#            return json.load(f)
+#    return {"projets": [], "archives": []}
+
+#def sauvegarder_donnees(data):
+#    with open(DATA_FILE, "w", encoding="utf-8") as f:
+#        json.dump(data, f, ensure_ascii=False, indent=2)
+
 def charger_donnees():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"projets": [], "archives": []}
+
+    resultat = supabase.table(
+        "projets_financiers"
+    ).select("*").execute()
+
+    if resultat.data:
+
+        return resultat.data[0]["data"]
+
+    data_initiale = {
+        "projets": [],
+        "archives": []
+    }
+
+    supabase.table(
+        "projets_financiers"
+    ).insert({
+        "id": "principal",
+        "type": "global",
+        "data": data_initiale
+    }).execute()
+
+    return data_initiale
+
 
 def sauvegarder_donnees(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    supabase.table(
+        "projets_financiers"
+    ).update({
+        "data": data
+    }).eq(
+        "id",
+        "principal"
+    ).execute()
 
 # ─── SESSION STATE ──────────────────────────────────────────────────────────────
 if "data" not in st.session_state:
