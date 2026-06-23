@@ -195,41 +195,35 @@ hr { border-color: #bfdbfe !important; }
 #        json.dump(data, f, ensure_ascii=False, indent=2)
 
 def charger_donnees():
-
-    resultat = supabase.table(
-        "projets_financiers"
-    ).select("*").execute()
-
-    if resultat.data:
-
-        return resultat.data[0]["data"]
-
-    data_initiale = {
-        "projets": [],
-        "archives": []
-    }
-
-    supabase.table(
-        "projets_financiers"
-    ).insert({
-        "id": "principal",
-        "type": "global",
-        "data": data_initiale
-    }).execute()
-
-    return data_initiale
+    try:
+        resultat = supabase.table("projets_financiers").select("*").eq("id", "principal").execute()
+        
+        if resultat.data and len(resultat.data) > 0:
+            return resultat.data[0]["data"]
+        
+        # Ligne introuvable, on la crée
+        data_initiale = {"projets": [], "archives": []}
+        supabase.table("projets_financiers").insert({
+            "id": "principal",
+            "type": "global",
+            "data": data_initiale
+        }).execute()
+        return data_initiale
+    
+    except Exception as e:
+        st.error(f"Erreur Supabase : {str(e)}")
+        return {"projets": [], "archives": []}
 
 
 def sauvegarder_donnees(data):
-
-    supabase.table(
-        "projets_financiers"
-    ).update({
-        "data": data
-    }).eq(
-        "id",
-        "principal"
-    ).execute()
+    try:
+        supabase.table("projets_financiers").upsert({
+            "id": "principal",
+            "type": "global",
+            "data": data
+        }).execute()
+    except Exception as e:
+        st.error(f"Erreur sauvegarde : {str(e)}")
 
 # ─── SESSION STATE ──────────────────────────────────────────────────────────────
 if "data" not in st.session_state:
