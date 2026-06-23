@@ -3,4 +3,4 @@ supabase
 pandas
 numpy
 plotly
-datatime
+datetime
