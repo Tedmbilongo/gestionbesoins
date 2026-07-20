@@ -21,7 +21,7 @@ import re
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Suivi Budgétaire - Comptes 6 & 7", layout="wide")
+st.set_page_config(page_title="Suivi Budgétaire - Comptes 6", layout="wide")
 
 # --------------------------------------------------------------------------------------
 # Constantes
@@ -113,7 +113,7 @@ def load_fec(file_bytes: bytes) -> pd.DataFrame:
 
 def filtre_comptes_6_7(df: pd.DataFrame) -> pd.DataFrame:
     """Ne garde que les comptes de classe 6 (charges) et 7 (produits)."""
-    out = df[df["Compte"].str[0].isin(["6", "7"])].copy()
+    out = df[df["Compte"].str[0].isin(["6"])].copy()
     out["Nature"] = out["Compte"].str[0].map({"6": "Charge", "7": "Produit"})
     out["Solde_Ligne"] = out.apply(
         lambda r: r["Debit"] - r["Credit"] if r["Compte"][0] == "6" else r["Credit"] - r["Debit"],
@@ -160,7 +160,7 @@ def cumul_par_departement(df: pd.DataFrame, date_fin: pd.Timestamp) -> pd.DataFr
         if col not in pivot.columns:
             pivot[col] = 0.0
     pivot = pivot.rename(columns={"Charge": "Cumul_Charges", "Produit": "Cumul_Produits"})
-    pivot["Solde_Net"] = pivot["Cumul_Produits"] - pivot["Cumul_Charges"]
+    pivot["Solde_Net"] = pivot["Cumul_Charges"] - pivot["Cumul_Produits"]
     return pivot.sort_values("Departement").reset_index(drop=True)
 
 
@@ -189,7 +189,7 @@ st.sidebar.header("2. Date d'arrêté")
 # Corps de l'application
 # --------------------------------------------------------------------------------------
 
-st.title("📊 Suivi budgétaire — Comptes de charges (6) et produits (7)")
+st.title("📊 Suivi budgétaire — Comptes de charges (6)")
 
 if fichier_n is None:
     st.info("👈 Commencez par importer le tableau N (fichier journal .csv) dans la barre latérale.")
@@ -217,10 +217,10 @@ date_choisie_ts = pd.Timestamp(date_choisie)
 
 st.caption(
     f"Cumul calculé du **01/01/{date_choisie_ts.year}** au **{date_choisie_ts.strftime('%d/%m/%Y')}** "
-    f"— {len(df_n_67)} écritures sur comptes 6/7 (fichier trié chronologiquement)."
+    f"— {len(df_n_67)} écritures sur comptes 6 (fichier trié chronologiquement)."
 )
 
-with st.expander("Voir les écritures brutes triées et filtrées (comptes 6 & 7)"):
+with st.expander("Voir les écritures brutes triées et filtrées (comptes 6)"):
     st.dataframe(df_n_67.drop(columns=["id_ligne"]), use_container_width=True)
 
 # --------------------------------------------------------------------------------------
@@ -414,8 +414,8 @@ c1, c2, c3 = st.columns(3)
 total_charges = consolide.loc[consolide["Nature"] == "Charge", "Solde_Cumule"].sum()
 total_produits = consolide.loc[consolide["Nature"] == "Produit", "Solde_Cumule"].sum()
 c1.metric("Total Charges cumulées", f"{total_charges:,.2f}")
-c2.metric("Total Produits cumulés", f"{total_produits:,.2f}")
-c3.metric("Résultat net (Produits - Charges)", f"{total_produits - total_charges:,.2f}")
+#c2.metric("Total Produits cumulés", f"{total_produits:,.2f}")
+#c3.metric("Résultat net (Produits - Charges)", f"{total_produits - total_charges:,.2f}")
 
 # --------------------------------------------------------------------------------------
 # 7. Affichage - Répartition par département
