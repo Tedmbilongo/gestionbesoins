@@ -125,6 +125,14 @@ def filtre_comptes_6_7(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def exclure_mot_cle(df: pd.DataFrame, mot_cle: str, colonne: str = "Libelle") -> pd.DataFrame:
+    """Exclut toutes les lignes dont la colonne (par défaut Libelle) contient le mot-clé, insensible à la casse."""
+    if not mot_cle:
+        return df
+    masque = df[colonne].astype(str).str.contains(mot_cle, case=False, na=False, regex=False)
+    return df[~masque].copy()
+
+
 def appliquer_overrides(df: pd.DataFrame, overrides: dict) -> pd.DataFrame:
     """Applique les départements saisis manuellement par-dessus la détection automatique."""
     df = df.copy()
@@ -202,6 +210,7 @@ except ValueError as e:
     st.stop()
 
 df_n_67 = filtre_comptes_6_7(df_n_full)
+df_n_67 = exclure_mot_cle(df_n_67, "EFREI")
 
 if df_n_67.empty:
     st.warning("Aucun compte de classe 6 ou 7 trouvé dans le fichier importé.")
@@ -217,7 +226,7 @@ date_choisie_ts = pd.Timestamp(date_choisie)
 
 st.caption(
     f"Cumul calculé du **01/01/{date_choisie_ts.year}** au **{date_choisie_ts.strftime('%d/%m/%Y')}** "
-    f"— {len(df_n_67)} écritures sur comptes 6/7 (fichier trié chronologiquement)."
+    f"— {len(df_n_67)} écritures sur comptes 6/7 (fichier trié chronologiquement, transactions 'EFREI' exclues)."
 )
 
 with st.expander("Voir les écritures brutes triées et filtrées (comptes 6 & 7)"):
@@ -364,6 +373,7 @@ if fichier_n1 is not None:
     try:
         df_n1_full = load_fec(fichier_n1.getvalue())
         df_n1_67 = filtre_comptes_6_7(df_n1_full)
+        df_n1_67 = exclure_mot_cle(df_n1_67, "EFREI")
         df_n1_67["Departement"] = df_n1_67["Departement_detecte"]  # pas de saisie manuelle sur N-1
 
         date_n1 = pd.Timestamp(year=date_choisie_ts.year - 1, month=date_choisie_ts.month, day=date_choisie_ts.day)
@@ -455,18 +465,18 @@ st.dataframe(dept_consolide.style.format(dept_format, na_rep="-"), use_container
 # 8. Export
 # --------------------------------------------------------------------------------------
 
-st.markdown("---")
-excel_bytes = to_excel_bytes(
-    {
-        "Consolide_par_compte": consolide,
-        "Repartition_departement": dept_consolide,
-        "Budgets_par_compte": edited_budgets,
-        "Budgets_par_departement": edited_budgets_dept,
-    }
-)
-st.download_button(
-    "⬇️ Télécharger le consolidé complet (Excel)",
-    data=excel_bytes,
-    file_name=f"consolide_{date_choisie_ts.strftime('%Y-%m-%d')}.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-)
+#st.markdown("---")
+#excel_bytes = to_excel_bytes(
+#    {
+#        "Consolide_par_compte": consolide,
+#        "Repartition_departement": dept_consolide,
+#        "Budgets_par_compte": edited_budgets,
+#        "Budgets_par_departement": edited_budgets_dept,
+#    }
+#)
+#st.download_button(
+#    "⬇️ Télécharger le consolidé complet (Excel)",
+#    data=excel_bytes,
+#    file_name=f"consolide_{date_choisie_ts.strftime('%Y-%m-%d')}.xlsx",
+#    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+#)
