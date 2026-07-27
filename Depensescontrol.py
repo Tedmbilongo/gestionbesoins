@@ -133,6 +133,27 @@ def exclure_mot_cle(df: pd.DataFrame, mot_cle: str, colonne: str = "Libelle") ->
     return df[~masque].copy()
 
 
+def filtre_caisse(df: pd.DataFrame, mot_cle: str = "caisse") -> pd.DataFrame:
+    """Ne garde que les comptes dont le libellé de compte contient le mot-clé (ex. 'Caisse')."""
+    masque = df["Libelle du compte"].astype(str).str.contains(mot_cle, case=False, na=False, regex=False)
+    return df[masque].copy()
+
+
+def cumul_caisse(df_caisse: pd.DataFrame, date_fin: pd.Timestamp) -> pd.DataFrame:
+    """Cumule Débit/Crédit/Solde par compte de caisse, de la première écriture du fichier jusqu'à date_fin incluse.
+
+    Contrairement aux comptes de charges/produits (remis à zéro chaque 01/01), un compte de trésorerie
+    porte un solde qui se poursuit d'une année sur l'autre : le cumul démarre donc dès la première écriture
+    disponible dans le fichier, pas seulement au 01/01 de l'année de date_fin.
+    """
+    periode = df_caisse[df_caisse["Date"] <= date_fin]
+    grp = periode.groupby(["Compte", "Libelle du compte"], as_index=False).agg(
+        Cumul_Debit=("Debit", "sum"), Cumul_Credit=("Credit", "sum")
+    )
+    grp["Solde_Caisse"] = grp["Cumul_Debit"] - grp["Cumul_Credit"]
+    return grp.sort_values("Compte").reset_index(drop=True)
+
+
 def appliquer_overrides(df: pd.DataFrame, overrides: dict) -> pd.DataFrame:
     """Applique les départements saisis manuellement par-dessus la détection automatique."""
     df = df.copy()
@@ -231,6 +252,46 @@ st.caption(
 
 with st.expander("Voir les écritures brutes triées et filtrées (comptes 6 & 7)"):
     st.dataframe(df_n_67.drop(columns=["id_ligne"]), use_container_width=True)
+
+# --------------------------------------------------------------------------------------
+# 2bis. Solde de caisse à date
+# --------------------------------------------------------------------------------------
+
+st.markdown("---")
+st.header("🪙 Solde de caisse à date")
+
+df_caisse = filtre_caisse(df_n_full)
+
+if df_caisse.empty:
+    st.info("Aucun compte dont le libellé contient « Caisse » n'a été trouvé dans le fichier importé.")
+else:
+    cumul_caisse_n = cumul_caisse(df_caisse, date_choisie_ts)
+
+    total_debit = cumul_caisse_n["Cumul_Debit"].sum()
+    total_credit = cumul_caisse_n["Cumul_Credit"].sum()
+    total_solde = cumul_caisse_n["Solde_Caisse"].sum()
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Cumul Débit", f"{total_debit:,.2f}")
+    c2.metric("Cumul Crédit", f"{total_credit:,.2f}")
+    c3.metric("Solde de caisse", f"{total_solde:,.2f}")
+
+    st.caption(
+        f"Cumul de toutes les écritures des comptes dont le libellé contient « Caisse », "
+        f"depuis la première écriture du fichier jusqu'au {date_choisie_ts.strftime('%d/%m/%Y')} "
+        f"(Solde = Débit − Crédit)."
+    )
+
+    st.dataframe(
+        cumul_caisse_n.style.format(
+            {"Cumul_Debit": "{:,.2f}", "Cumul_Credit": "{:,.2f}", "Solde_Caisse": "{:,.2f}"}
+        ),
+        use_container_width=True,
+    )
+
+    with st.expander("Voir le détail des écritures de caisse jusqu'à la date choisie"):
+        detail_caisse = df_caisse[df_caisse["Date"] <= date_choisie_ts].drop(columns=["id_ligne"], errors="ignore")
+        st.dataframe(detail_caisse, use_container_width=True)
 
 # --------------------------------------------------------------------------------------
 # 2bis. Détection / saisie manuelle du département
@@ -460,23 +521,3 @@ dept_consolide["% Budget consommé"] = dept_consolide.apply(
 dept_format.update({"Budget": "{:,.2f}", "% Budget consommé": "{:,.1f}%"})
 
 st.dataframe(dept_consolide.style.format(dept_format, na_rep="-"), use_container_width=True)
-
-# --------------------------------------------------------------------------------------
-# 8. Export
-# --------------------------------------------------------------------------------------
-
-#st.markdown("---")
-#excel_bytes = to_excel_bytes(
-#    {
-#        "Consolide_par_compte": consolide,
-#        "Repartition_departement": dept_consolide,
-#        "Budgets_par_compte": edited_budgets,
-#        "Budgets_par_departement": edited_budgets_dept,
-#    }
-#)
-#st.download_button(
-#    "⬇️ Télécharger le consolidé complet (Excel)",
-#    data=excel_bytes,
-#    file_name=f"consolide_{date_choisie_ts.strftime('%Y-%m-%d')}.xlsx",
-#    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#)
